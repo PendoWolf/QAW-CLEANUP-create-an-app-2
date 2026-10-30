@@ -20,7 +20,16 @@ export default function App() {
       setState(await fn());
       trackEvent(name);
     } catch (e) {
-      setError((e as Error).message);
+      const message = (e as Error).message;
+      setError(message);
+      // Pendo Track Event: a counter/state API call failed (non-OK response or
+      // network error). The demo-* events above only fire on success.
+      if (typeof window !== "undefined") {
+        window.pendo?.track?.("counter_action_failed", {
+          action: name,
+          errorMessage: String(message ?? "unknown").slice(0, 200),
+        });
+      }
     }
   };
 
