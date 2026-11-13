@@ -10,6 +10,25 @@ function trackEvent(name: string) {
   }
 }
 
+// Fires when an API call fails and the red error message (data-testid="error")
+// is shown, so visitors who can't complete an action are visible in Pendo.
+function trackActionFailed(action: string, err: Error) {
+  try {
+    if (typeof window !== "undefined") {
+      const status = err.message.match(/failed: (\d{3})$/)?.[1];
+      window.pendo?.track?.("Action failed", {
+        action,
+        error_type: err.name || "Error",
+        error_message: err.message.slice(0, 100),
+        page: window.location.pathname,
+        ...(status ? { status_code: Number(status) } : {}),
+      });
+    }
+  } catch {
+    // Tracking must never break the app's error handling.
+  }
+}
+
 export default function App() {
   const [state, setState] = useState<AppState>({ counter: 0, lastAction: "none" });
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +39,9 @@ export default function App() {
       setState(await fn());
       trackEvent(name);
     } catch (e) {
-      setError((e as Error).message);
+      const err = e as Error;
+      setError(err.message);
+      trackActionFailed(name, err);
     }
   };
 
